@@ -103,7 +103,7 @@ Be strict: only return true for documents that contain actual medical/clinical/h
 {
   "patientId": "string or empty",
   "fullName": "string or empty",
-  1"age": "number as string or empty",
+  "age": "number as string or empty",
   "gender": "male" | "female" | "other" | "",
   "contactNumber": "string or empty",
   "surgeryType": "cataract" | "lasik" | "glaucoma" | "retinal" | "",
