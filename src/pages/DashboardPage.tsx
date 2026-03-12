@@ -36,6 +36,13 @@ const pieData = [
   { name: "Retinal", value: 15, color: "hsl(40, 90%, 55%)" },
 ];
 
+const weeklyDetection = [
+  { week: "W1", count: 35 },
+  { week: "W2", count: 52 },
+  { week: "W3", count: 48 },
+  { week: "W4", count: 61 },
+];
+
 const stats = [
   { label: "Total Assessments", value: "1,247", sub: "All time", icon: Activity, iconColor: "text-primary" },
   { label: "High-Risk Patients", value: "18%", sub: "Of total assessments", icon: AlertTriangle, iconColor: "text-destructive" },
@@ -71,7 +78,6 @@ const DashboardPage = () => {
 
         {/* Charts row 1 */}
         <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          {/* Bar chart */}
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -85,14 +91,13 @@ const DashboardPage = () => {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis tick={{ fontSize: 12 }} />
                 <Tooltip />
-                <Bar dataKey="low" stackId="a" fill="hsl(221, 83%, 85%)" radius={[0, 0, 0, 0]} />
+                <Bar dataKey="low" stackId="a" fill="hsl(221, 83%, 85%)" />
                 <Bar dataKey="medium" stackId="a" fill="hsl(221, 83%, 70%)" />
                 <Bar dataKey="high" stackId="a" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Risk factors */}
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -110,10 +115,7 @@ const DashboardPage = () => {
                   <div className="h-2.5 w-full rounded-full bg-secondary">
                     <div
                       className="h-2.5 rounded-full"
-                      style={{
-                        width: `${(f.count / 234) * 100}%`,
-                        backgroundColor: f.color,
-                      }}
+                      style={{ width: `${(f.count / 234) * 100}%`, backgroundColor: f.color }}
                     />
                   </div>
                 </div>
@@ -124,7 +126,6 @@ const DashboardPage = () => {
 
         {/* Charts row 2 */}
         <div className="mt-8 grid gap-6 lg:grid-cols-5">
-          {/* Line chart */}
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm lg:col-span-3">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -148,7 +149,6 @@ const DashboardPage = () => {
             </div>
           </div>
 
-          {/* Pie chart */}
           <div className="rounded-xl border border-border bg-card p-6 shadow-sm lg:col-span-2">
             <div className="mb-4 flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -175,6 +175,26 @@ const DashboardPage = () => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Visual AI Detection Trend */}
+        <div className="mt-8 rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="mb-1 flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+              <Camera className="h-4 w-4 text-primary" />
+            </div>
+            <h3 className="font-semibold text-foreground">Visual AI Detection Trend</h3>
+          </div>
+          <p className="mb-4 text-xs text-muted-foreground">Weekly media-detected abnormalities</p>
+          <ResponsiveContainer width="100%" height={200}>
+            <BarChart data={weeklyDetection}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" />
+              <XAxis dataKey="week" tick={{ fontSize: 12 }} />
+              <YAxis tick={{ fontSize: 12 }} />
+              <Tooltip />
+              <Bar dataKey="count" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

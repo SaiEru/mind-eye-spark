@@ -1,5 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 
 const CTASection = () => {
   return (
@@ -12,13 +13,11 @@ const CTASection = () => {
           Begin your first patient assessment and experience the power of predictive AI in
           ophthalmology.
         </p>
-        <Button
-          size="lg"
-          variant="secondary"
-          className="gap-2 px-8 text-base font-semibold"
-        >
-          Start Patient Assessment
-          <ArrowRight className="h-4 w-4" />
+        <Button size="lg" variant="secondary" className="gap-2 px-8 text-base font-semibold" asChild>
+          <Link to="/assessment">
+            Start Patient Assessment
+            <ArrowRight className="h-4 w-4" />
+          </Link>
         </Button>
       </div>
     </section>
