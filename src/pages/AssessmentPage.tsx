@@ -81,10 +81,11 @@ const AssessmentPage = () => {
     setData((prev) => ({ ...prev, ...partial }));
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     const r = calculateRiskScore(data);
     setResult(r);
     setMode("result");
+    await saveAssessment(data, r);
   };
 
   const handleReset = () => {
