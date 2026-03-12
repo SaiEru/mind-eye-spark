@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
-import { FileText, PenLine, ArrowLeft, ArrowRight, CheckCircle2, Loader2, Upload, AlertCircle } from "lucide-react";
+import { FileText, PenLine, ArrowLeft, ArrowRight, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { AssessmentData, initialAssessmentData, RiskResult } from "@/types/assessment";
 import { calculateRiskScore } from "@/lib/riskCalculator";
 import Step1Demographics from "@/components/assessment/Step1Demographics";
@@ -13,6 +13,8 @@ import Step6Symptoms from "@/components/assessment/Step6Symptoms";
 import Step7FollowUp from "@/components/assessment/Step7FollowUp";
 import RiskResultView from "@/components/assessment/RiskResultView";
 import { useToast } from "@/hooks/use-toast";
+import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
+import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 const stepLabels = [
   "Demographics",
@@ -24,12 +26,29 @@ const stepLabels = [
   "Follow-up",
 ];
 
-const ALLOWED_TYPES = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
-  "image/jpg",
-];
+const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/jpg"];
+
+GlobalWorkerOptions.workerSrc = pdfWorker;
+
+const extractPdfText = async (file: File): Promise<string> => {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await getDocument({ data: arrayBuffer }).promise;
+  const pagesToRead = Math.min(pdf.numPages, 10);
+  const textChunks: string[] = [];
+
+  for (let pageIndex = 1; pageIndex <= pagesToRead; pageIndex++) {
+    const page = await pdf.getPage(pageIndex);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item: any) => ("str" in item ? item.str : ""))
+      .join(" ")
+      .trim();
+
+    if (pageText) textChunks.push(pageText);
+  }
+
+  return textChunks.join("\n").trim();
+};
 
 type Mode = "entry" | "uploading" | "form" | "result";
 
