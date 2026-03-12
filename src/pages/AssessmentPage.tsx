@@ -13,6 +13,8 @@ import Step6Symptoms from "@/components/assessment/Step6Symptoms";
 import Step7FollowUp from "@/components/assessment/Step7FollowUp";
 import RiskResultView from "@/components/assessment/RiskResultView";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
