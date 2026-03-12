@@ -62,6 +62,20 @@ const AssessmentPage = () => {
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult) => {
+    if (!user) return;
+    await supabase.from("assessments").insert({
+      doctor_id: user.id,
+      patient_name: assessmentData.fullName || "Unknown",
+      assessment_data: assessmentData as any,
+      risk_score: riskResult.overallScore,
+      risk_level: riskResult.riskLevel,
+      surgery_type: assessmentData.surgeryType || "",
+      status: "Completed",
+    });
+  };
 
   const handleChange = (partial: Partial<AssessmentData>) => {
     setData((prev) => ({ ...prev, ...partial }));
