@@ -132,21 +132,38 @@ const AssessmentPage = () => {
         throw new Error(result.error || "Failed to process report");
       }
 
+      if (result.error === "invalid_document") {
+        const docType = result.documentType || "non-medical document";
+        setUploadError(`The uploaded file appears to be a "${docType}". Please upload a valid medical or ophthalmological report (e.g., post-operative report, eye exam, clinical notes).`);
+        toast({
+          title: `Invalid document: ${docType}`,
+          description: "Please upload a medical report to proceed.",
+          variant: "destructive",
+        });
+        setMode("entry");
+        return;
+      }
+
       if (result.data) {
         // Merge extracted data with initial data (keeping defaults for missing values)
         const extracted = result.data;
-        setData((prev) => ({
-          ...prev,
+        const newData = {
+          ...initialAssessmentData,
           ...Object.fromEntries(
             Object.entries(extracted).filter(([_, v]) => v !== "" && v !== null && v !== undefined)
           ),
-        }));
+        };
+        setData(newData);
+
+        // Calculate risk score directly and show results
+        const riskResult = calculateRiskScore(newData as AssessmentData);
+        setResult(riskResult);
 
         toast({
           title: "Report processed successfully",
-          description: "Clinical values have been extracted and pre-filled. Please review and adjust as needed.",
+          description: "Clinical values extracted and risk score calculated.",
         });
-        setMode("form");
+        setMode("result");
       }
     } catch (err) {
       console.error("Upload error:", err);

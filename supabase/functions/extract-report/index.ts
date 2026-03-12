@@ -21,7 +21,84 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are a medical report data extraction AI. You will be given the text content of a medical/ophthalmological report. Extract the following clinical values and return them as a JSON object. Use ONLY these exact keys and value formats:
+    // Step 1: Validate if the document is a medical/ophthalmological report
+    const validationPrompt = `You are a document classification AI. Analyze the given document and determine if it is a medical or ophthalmological report (e.g., eye exam report, surgical report, discharge summary, clinical notes, lab results, etc.).
+
+Respond with ONLY a JSON object in this exact format:
+{
+  "isMedicalReport": true or false,
+  "documentType": "brief description of what the document actually is, e.g. 'Computer Science Resume', 'Passport Photo', 'Eye Surgery Report', 'Invoice', etc."
+}
+
+Be strict: only return true for documents that contain actual medical/clinical/health data. Resumes, photos, invoices, academic documents, etc. are NOT medical reports.`;
+
+    const validationUserMessage = fileType.startsWith("image/")
+      ? [
+          { type: "text", text: `Classify this document (${fileName}):` },
+          { type: "image_url", image_url: { url: `data:${fileType};base64,${fileContent}` } }
+        ]
+      : `Classify this document (${fileName}):\n\n${fileContent}`;
+
+    const validationResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: validationPrompt },
+          { role: "user", content: validationUserMessage },
+        ],
+        stream: false,
+      }),
+    });
+
+    if (!validationResponse.ok) {
+      if (validationResponse.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (validationResponse.status === 402) {
+        return new Response(JSON.stringify({ error: "AI usage limit reached. Please add credits." }), {
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const t = await validationResponse.text();
+      console.error("Validation AI error:", validationResponse.status, t);
+      return new Response(JSON.stringify({ error: "AI processing failed" }), {
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const validationResult = await validationResponse.json();
+    const validationContent = validationResult.choices?.[0]?.message?.content || "";
+    
+    let classification;
+    try {
+      const jsonMatch = validationContent.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, validationContent];
+      classification = JSON.parse(jsonMatch[1].trim());
+    } catch {
+      console.error("Failed to parse validation response:", validationContent);
+      classification = { isMedicalReport: false, documentType: "Unknown document" };
+    }
+
+    if (!classification.isMedicalReport) {
+      const docType = classification.documentType || "non-medical document";
+      return new Response(JSON.stringify({ 
+        error: "invalid_document",
+        documentType: docType,
+        message: `The uploaded file appears to be a "${docType}". Please upload a valid medical or ophthalmological report (e.g., post-operative report, eye exam, clinical notes).`
+      }), {
+        status: 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Step 2: Extract clinical data from the validated medical report
+    const extractionPrompt = `You are a medical report data extraction AI. You will be given the text content of a medical/ophthalmological report. Extract the following clinical values and return them as a JSON object. Use ONLY these exact keys and value formats:
 
 {
   "patientId": "string or empty",
@@ -80,7 +157,7 @@ If a value cannot be determined from the report, use empty string for strings an
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: extractionPrompt },
           { role: "user", content: userMessage },
         ],
         stream: false,
@@ -90,28 +167,24 @@ If a value cannot be determined from the report, use empty string for strings an
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "AI usage limit reached. Please add credits." }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("AI gateway error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI processing failed" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const aiResult = await response.json();
     const content = aiResult.choices?.[0]?.message?.content || "";
     
-    // Parse JSON from the AI response (may be wrapped in markdown code block)
     let extracted;
     try {
       const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, content];
