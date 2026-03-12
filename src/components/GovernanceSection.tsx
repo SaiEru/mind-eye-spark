@@ -1,11 +1,12 @@
 import { Shield } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { forwardRef } from "react";
 
 const badges = ["Human-in-the-loop", "Bias Awareness", "Audit Trail", "HIPAA Compliant"];
 
-const GovernanceSection = () => {
+const GovernanceSection = forwardRef<HTMLElement>((_, ref) => {
   return (
-    <section className="py-20">
+    <section ref={ref} className="py-20">
       <div className="mx-auto max-w-3xl px-6 text-center">
         <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
           <Shield className="h-6 w-6 text-primary" />
@@ -32,6 +33,8 @@ const GovernanceSection = () => {
       </div>
     </section>
   );
-};
+});
+
+GovernanceSection.displayName = "GovernanceSection";
 
 export default GovernanceSection;

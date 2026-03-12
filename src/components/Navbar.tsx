@@ -1,6 +1,7 @@
 import { Eye, Activity, BarChart3, FileText, Shield, HelpCircle, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "react-router-dom";
+import { forwardRef } from "react";
 
 const navItems = [
   { label: "Home", icon: Eye, path: "/" },
@@ -10,11 +11,11 @@ const navItems = [
   { label: "AI Governance", icon: Shield, path: "/governance" },
 ];
 
-const Navbar = () => {
+const Navbar = forwardRef<HTMLElement>((_, ref) => {
   const location = useLocation();
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
+    <nav ref={ref} className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <Link to="/" className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
@@ -54,6 +55,8 @@ const Navbar = () => {
       </div>
     </nav>
   );
-};
+});
+
+Navbar.displayName = "Navbar";
 
 export default Navbar;

@@ -1,10 +1,11 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { forwardRef } from "react";
 
-const CTASection = () => {
+const CTASection = forwardRef<HTMLElement>((_, ref) => {
   return (
-    <section className="border-t border-border bg-primary py-20">
+    <section ref={ref} className="border-t border-border bg-primary py-20">
       <div className="mx-auto max-w-3xl px-6 text-center">
         <h2 className="mb-4 text-3xl font-bold text-primary-foreground">
           Ready to Transform Post-Operative Care?
@@ -22,6 +23,8 @@ const CTASection = () => {
       </div>
     </section>
   );
-};
+});
+
+CTASection.displayName = "CTASection";
 
 export default CTASection;
