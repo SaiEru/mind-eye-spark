@@ -117,17 +117,26 @@ const AssessmentPage = () => {
     setMode("uploading");
 
     try {
-      // Read file as base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          // Remove the data:...;base64, prefix
-          resolve(result.split(",")[1]);
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+      let fileContent: string | undefined;
+      let fileText: string | undefined;
+
+      if (file.type === "application/pdf") {
+        fileText = await extractPdfText(file);
+        if (!fileText || fileText.length < 30) {
+          throw new Error("Could not read enough text from this PDF. Please upload a clearer report or image.");
+        }
+      } else {
+        // Read image as base64
+        fileContent = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const result = reader.result as string;
+            resolve(result.split(",")[1]);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
 
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -139,7 +148,8 @@ const AssessmentPage = () => {
           Authorization: `Bearer ${SUPABASE_KEY}`,
         },
         body: JSON.stringify({
-          fileContent: base64,
+          fileContent,
+          fileText,
           fileType: file.type,
           fileName: file.name,
         }),
@@ -148,23 +158,23 @@ const AssessmentPage = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Failed to process report");
-      }
+        if (result.error === "invalid_document") {
+          const docType = result.documentType || "non-medical document";
+          const invalidMessage = result.message || `The uploaded file appears to be a "${docType}". Please upload a valid medical or ophthalmological report.`;
+          setUploadError(invalidMessage);
+          toast({
+            title: `Invalid document: ${docType}`,
+            description: "Please upload a medical report to proceed.",
+            variant: "destructive",
+          });
+          setMode("entry");
+          return;
+        }
 
-      if (result.error === "invalid_document") {
-        const docType = result.documentType || "non-medical document";
-        setUploadError(`The uploaded file appears to be a "${docType}". Please upload a valid medical or ophthalmological report (e.g., post-operative report, eye exam, clinical notes).`);
-        toast({
-          title: `Invalid document: ${docType}`,
-          description: "Please upload a medical report to proceed.",
-          variant: "destructive",
-        });
-        setMode("entry");
-        return;
+        throw new Error(result.message || result.error || "Failed to process report");
       }
 
       if (result.data) {
-        // Merge extracted data with initial data (keeping defaults for missing values)
         const extracted = result.data;
         const newData = {
           ...initialAssessmentData,
@@ -174,7 +184,6 @@ const AssessmentPage = () => {
         };
         setData(newData);
 
-        // Calculate risk score directly and show results
         const riskResult = calculateRiskScore(newData as AssessmentData);
         setResult(riskResult);
 
