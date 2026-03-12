@@ -14,13 +14,143 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      assessments: {
+        Row: {
+          assessment_data: Json
+          created_at: string | null
+          doctor_id: string
+          id: string
+          patient_id: string | null
+          patient_name: string | null
+          risk_level: string | null
+          risk_score: number | null
+          status: string | null
+          surgery_type: string | null
+        }
+        Insert: {
+          assessment_data?: Json
+          created_at?: string | null
+          doctor_id: string
+          id?: string
+          patient_id?: string | null
+          patient_name?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          status?: string | null
+          surgery_type?: string | null
+        }
+        Update: {
+          assessment_data?: Json
+          created_at?: string | null
+          doctor_id?: string
+          id?: string
+          patient_id?: string | null
+          patient_name?: string | null
+          risk_level?: string | null
+          risk_score?: number | null
+          status?: string | null
+          surgery_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessments_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assessments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patients: {
+        Row: {
+          age: number | null
+          contact_number: string | null
+          created_at: string | null
+          diagnosis: string | null
+          doctor_id: string
+          full_name: string
+          gender: string | null
+          id: string
+          notes: string | null
+        }
+        Insert: {
+          age?: number | null
+          contact_number?: string | null
+          created_at?: string | null
+          diagnosis?: string | null
+          doctor_id: string
+          full_name: string
+          gender?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Update: {
+          age?: number | null
+          contact_number?: string | null
+          created_at?: string | null
+          diagnosis?: string | null
+          doctor_id?: string
+          full_name?: string
+          gender?: string | null
+          id?: string
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patients_doctor_id_fkey"
+            columns: ["doctor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string
+          full_name: string
+          id: string
+          license_number: string | null
+          phone: string | null
+          role: string
+          specialization: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          full_name?: string
+          id: string
+          license_number?: string | null
+          phone?: string | null
+          role?: string
+          specialization?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          license_number?: string | null
+          phone?: string | null
+          role?: string
+          specialization?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: { Args: { _role: string; _user_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

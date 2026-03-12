@@ -2,3 +2,9 @@ project_id = "hlpdowxuscszkonsfccq"
 
 [functions.extract-report]
 verify_jwt = false
+
+[functions.seed-admin]
+verify_jwt = false
+
+[functions.create-doctor]
+verify_jwt = false

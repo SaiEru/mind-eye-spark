@@ -13,6 +13,8 @@ import Step6Symptoms from "@/components/assessment/Step6Symptoms";
 import Step7FollowUp from "@/components/assessment/Step7FollowUp";
 import RiskResultView from "@/components/assessment/RiskResultView";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { getDocument, GlobalWorkerOptions } from "pdfjs-dist";
 import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
@@ -60,15 +62,30 @@ const AssessmentPage = () => {
   const [uploadError, setUploadError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+
+  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult) => {
+    if (!user) return;
+    await supabase.from("assessments").insert({
+      doctor_id: user.id,
+      patient_name: assessmentData.fullName || "Unknown",
+      assessment_data: assessmentData as any,
+      risk_score: riskResult.overallScore,
+      risk_level: riskResult.riskLevel,
+      surgery_type: assessmentData.surgeryType || "",
+      status: "Completed",
+    });
+  };
 
   const handleChange = (partial: Partial<AssessmentData>) => {
     setData((prev) => ({ ...prev, ...partial }));
   };
 
-  const handleAnalyze = () => {
+  const handleAnalyze = async () => {
     const r = calculateRiskScore(data);
     setResult(r);
     setMode("result");
+    await saveAssessment(data, r);
   };
 
   const handleReset = () => {
@@ -186,6 +203,7 @@ const AssessmentPage = () => {
 
         const riskResult = calculateRiskScore(newData as AssessmentData);
         setResult(riskResult);
+        await saveAssessment(newData as AssessmentData, riskResult);
 
         toast({
           title: "Report processed successfully",

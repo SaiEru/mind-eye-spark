@@ -1,29 +1,40 @@
-import { Eye, Activity, BarChart3, FileText, Shield, HelpCircle, Settings } from "lucide-react";
+import { Eye, Activity, BarChart3, FileText, Shield, LogOut, User, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "react-router-dom";
 import { forwardRef } from "react";
-
-const navItems = [
-  { label: "Home", icon: Eye, path: "/" },
-  { label: "Patient Assessment", icon: Activity, path: "/assessment" },
-  { label: "Analytics Dashboard", icon: BarChart3, path: "/dashboard" },
-  { label: "Reports", icon: FileText, path: "/reports" },
-  { label: "AI Governance", icon: Shield, path: "/governance" },
-];
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = forwardRef<HTMLElement>((_, ref) => {
   const location = useLocation();
+  const { profile, signOut } = useAuth();
+
+  const isAdmin = profile?.role === "admin";
+
+  const navItems = isAdmin
+    ? [
+        { label: "Dashboard", icon: BarChart3, path: "/admin/dashboard" },
+        { label: "Doctors", icon: Stethoscope, path: "/admin/doctors" },
+        { label: "Reports", icon: FileText, path: "/admin/reports" },
+        { label: "AI Governance", icon: Shield, path: "/admin/governance" },
+      ]
+    : [
+        { label: "My Patients", icon: BarChart3, path: "/doctor/dashboard" },
+        { label: "Assessment", icon: Activity, path: "/doctor/assessment" },
+        { label: "Reports", icon: FileText, path: "/doctor/reports" },
+        { label: "Profile", icon: User, path: "/doctor/profile" },
+        { label: "AI Governance", icon: Shield, path: "/doctor/governance" },
+      ];
 
   return (
     <nav ref={ref} className="sticky top-0 z-50 border-b border-border bg-card/80 backdrop-blur-md">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-        <Link to="/" className="flex items-center gap-3">
+        <Link to={isAdmin ? "/admin/dashboard" : "/doctor/dashboard"} className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <Eye className="h-5 w-5 text-primary-foreground" />
           </div>
           <div>
             <span className="font-semibold text-foreground">Eye Complication Risk</span>
-            <p className="text-xs text-muted-foreground">Intelligence Platform</p>
+            <p className="text-xs text-muted-foreground">{isAdmin ? "Admin Panel" : `Dr. ${profile?.full_name || ""}`}</p>
           </div>
         </Link>
 
@@ -44,14 +55,10 @@ const Navbar = forwardRef<HTMLElement>((_, ref) => {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <Settings className="h-4 w-4" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" className="gap-2" onClick={signOut}>
+          <LogOut className="h-4 w-4" />
+          Sign Out
+        </Button>
       </div>
     </nav>
   );
