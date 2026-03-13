@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import { FileText, Search, Calendar } from "lucide-react";
+import { FileText, Search, Calendar, ChevronDown, ChevronUp, Stethoscope } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
@@ -15,15 +15,20 @@ const riskBadgeVariant = (level: string) => {
 const AdminReportsPage = () => {
   const [search, setSearch] = useState("");
   const [assessments, setAssessments] = useState<any[]>([]);
+  const [doctors, setDoctors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
-      const { data } = await supabase
-        .from("assessments")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setAssessments(data || []);
+      const [{ data: assessData }, { data: profileData }] = await Promise.all([
+        supabase.from("assessments").select("*").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("id, full_name").eq("role", "doctor"),
+      ]);
+      setAssessments(assessData || []);
+      const map: Record<string, string> = {};
+      (profileData || []).forEach((p: any) => { map[p.id] = p.full_name; });
+      setDoctors(map);
       setLoading(false);
     };
     load();
@@ -34,6 +39,68 @@ const AdminReportsPage = () => {
       (a.patient_name || "").toLowerCase().includes(search.toLowerCase()) ||
       a.id.toLowerCase().includes(search.toLowerCase())
   );
+
+  const renderDetail = (label: string, value: any) => {
+    if (value === undefined || value === null || value === "") return null;
+    return (
+      <div className="flex justify-between border-b border-border py-2 last:border-0">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="text-xs font-medium text-foreground">{String(value)}</span>
+      </div>
+    );
+  };
+
+  const renderAssessmentData = (data: any) => {
+    if (!data || typeof data !== "object") return <p className="text-xs text-muted-foreground">No assessment data available.</p>;
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-3">
+          <h4 className="text-xs font-semibold text-foreground mb-2">Demographics</h4>
+          {renderDetail("Age", data.age)}
+          {renderDetail("Gender", data.gender)}
+          {renderDetail("Diabetes", data.diabetes)}
+          {renderDetail("Hypertension", data.hypertension)}
+        </div>
+        <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-3">
+          <h4 className="text-xs font-semibold text-foreground mb-2">Surgery Details</h4>
+          {renderDetail("Surgery Type", data.surgeryType)}
+          {renderDetail("Eye", data.eye)}
+          {renderDetail("Anesthesia", data.anesthesia)}
+          {renderDetail("IOL Type", data.iolType)}
+        </div>
+        <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-3">
+          <h4 className="text-xs font-semibold text-foreground mb-2">Medical History</h4>
+          {renderDetail("Glaucoma", data.glaucoma)}
+          {renderDetail("Retinal Disease", data.retinalDisease)}
+          {renderDetail("Corneal Disease", data.cornealDisease)}
+          {renderDetail("Previous Surgery", data.previousSurgery)}
+          {renderDetail("Uveitis", data.uveitis)}
+        </div>
+        <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-3">
+          <h4 className="text-xs font-semibold text-foreground mb-2">Pre-Operative</h4>
+          {renderDetail("IOP (mmHg)", data.iop)}
+          {renderDetail("Visual Acuity", data.visualAcuity)}
+          {renderDetail("Axial Length (mm)", data.axialLength)}
+          {renderDetail("Endothelial Cell Count", data.endothelialCellCount)}
+        </div>
+        <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-3">
+          <h4 className="text-xs font-semibold text-foreground mb-2">Post-Operative</h4>
+          {renderDetail("Post-Op IOP", data.postOpIop)}
+          {renderDetail("Post-Op VA", data.postOpVa)}
+          {renderDetail("Complications", data.complications)}
+        </div>
+        <div className="space-y-1 rounded-lg border border-border bg-muted/30 p-3">
+          <h4 className="text-xs font-semibold text-foreground mb-2">Symptoms & Follow-Up</h4>
+          {renderDetail("Pain Level", data.painLevel)}
+          {renderDetail("Redness", data.redness)}
+          {renderDetail("Blurring", data.blurring)}
+          {renderDetail("Light Sensitivity", data.lightSensitivity)}
+          {renderDetail("Follow-Up Date", data.followUpDate)}
+          {renderDetail("Notes", data.notes)}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -57,26 +124,42 @@ const AdminReportsPage = () => {
           </div>
         ) : (
           <div className="mt-6 space-y-4">
-            {filtered.map((a) => (
-              <div key={a.id} className="flex items-center justify-between rounded-xl border border-border bg-card p-5 shadow-sm">
-                <div className="flex items-start gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                    <FileText className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-foreground">{a.patient_name || "Unknown"}</span>
-                      <Badge variant={riskBadgeVariant(a.risk_level)}>{a.risk_level} Risk — {a.risk_score}%</Badge>
+            {filtered.map((a) => {
+              const isExpanded = expandedId === a.id;
+              return (
+                <div key={a.id} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                  <div
+                    className="flex items-center justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors"
+                    onClick={() => setExpandedId(isExpanded ? null : a.id)}
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-foreground">{a.patient_name || "Unknown"}</span>
+                          <Badge variant={riskBadgeVariant(a.risk_level)}>{a.risk_level} Risk — {a.risk_score}%</Badge>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {new Date(a.created_at).toLocaleDateString()}</span>
+                          {a.surgery_type && <span>· Surgery: <strong>{a.surgery_type}</strong></span>}
+                          <span>· {a.status}</span>
+                          <span className="flex items-center gap-1">· <Stethoscope className="h-3 w-3" /> Dr. {doctors[a.doctor_id] || "Unknown"}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3 inline" /> {new Date(a.created_at).toLocaleDateString()}
-                      {a.surgery_type && <> · Surgery: <strong>{a.surgery_type}</strong></>}
-                      {" · "}{a.status}
-                    </p>
+                    {isExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
                   </div>
+                  {isExpanded && (
+                    <div className="border-t border-border px-5 py-4">
+                      <h3 className="text-sm font-semibold text-foreground mb-3">Full Assessment Details</h3>
+                      {renderAssessmentData(a.assessment_data)}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
