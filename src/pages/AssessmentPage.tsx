@@ -94,7 +94,29 @@ const AssessmentPage = () => {
     loadPatient();
   }, [patientId, user]);
 
-  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult) => {
+  const generateAIExplanation = async (assessmentData: AssessmentData, riskResult: RiskResult): Promise<string[]> => {
+    try {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-risk-explanation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({
+          assessmentData,
+          riskScore: riskResult.overallScore,
+          riskLevel: riskResult.riskLevel,
+          factors: riskResult.factors,
+        }),
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.explanation || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult, explanation: string[] = []) => {
     if (!user) return;
     await supabase.from("assessments").insert({
       doctor_id: user.id,
@@ -105,7 +127,8 @@ const AssessmentPage = () => {
       risk_level: riskResult.riskLevel,
       surgery_type: assessmentData.surgeryType || "",
       status: "Completed",
-    });
+      risk_explanation: explanation.join("\n"),
+    } as any);
   };
 
   const handleChange = (partial: Partial<AssessmentData>) => {
