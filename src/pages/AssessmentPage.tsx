@@ -347,7 +347,7 @@ const AssessmentPage = () => {
         <Navbar />
         <div className="mx-auto max-w-4xl px-6 py-12">
           <h1 className="mb-8 text-3xl font-bold text-foreground">Risk Assessment Results</h1>
-          <RiskResultView result={result} onReset={handleReset} data={data} />
+          <RiskResultView result={result} onReset={handleReset} data={data} aiExplanation={aiExplanation} aiLoading={aiLoading} />
         </div>
       </div>
     );
