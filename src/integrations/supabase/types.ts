@@ -22,6 +22,7 @@ export type Database = {
           id: string
           patient_id: string | null
           patient_name: string | null
+          risk_explanation: string | null
           risk_level: string | null
           risk_score: number | null
           status: string | null
@@ -34,6 +35,7 @@ export type Database = {
           id?: string
           patient_id?: string | null
           patient_name?: string | null
+          risk_explanation?: string | null
           risk_level?: string | null
           risk_score?: number | null
           status?: string | null
@@ -46,6 +48,7 @@ export type Database = {
           id?: string
           patient_id?: string | null
           patient_name?: string | null
+          risk_explanation?: string | null
           risk_level?: string | null
           risk_score?: number | null
           status?: string | null

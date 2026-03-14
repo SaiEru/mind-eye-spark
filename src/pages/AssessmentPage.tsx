@@ -94,7 +94,29 @@ const AssessmentPage = () => {
     loadPatient();
   }, [patientId, user]);
 
-  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult) => {
+  const generateAIExplanation = async (assessmentData: AssessmentData, riskResult: RiskResult): Promise<string[]> => {
+    try {
+      const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+      const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/generate-risk-explanation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${SUPABASE_KEY}` },
+        body: JSON.stringify({
+          assessmentData,
+          riskScore: riskResult.overallScore,
+          riskLevel: riskResult.riskLevel,
+          factors: riskResult.factors,
+        }),
+      });
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.explanation || [];
+    } catch {
+      return [];
+    }
+  };
+
+  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult, explanation: string[] = []) => {
     if (!user) return;
     await supabase.from("assessments").insert({
       doctor_id: user.id,
@@ -105,18 +127,26 @@ const AssessmentPage = () => {
       risk_level: riskResult.riskLevel,
       surgery_type: assessmentData.surgeryType || "",
       status: "Completed",
-    });
+      risk_explanation: explanation.join("\n"),
+    } as any);
   };
 
   const handleChange = (partial: Partial<AssessmentData>) => {
     setData((prev) => ({ ...prev, ...partial }));
   };
 
+  const [aiExplanation, setAiExplanation] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const handleAnalyze = async () => {
     const r = calculateRiskScore(data);
     setResult(r);
     setMode("result");
-    await saveAssessment(data, r);
+    setAiLoading(true);
+    const explanation = await generateAIExplanation(data, r);
+    setAiExplanation(explanation);
+    setAiLoading(false);
+    await saveAssessment(data, r, explanation);
   };
 
   const handleReset = () => {
@@ -214,10 +244,14 @@ const AssessmentPage = () => {
 
         const riskResult = calculateRiskScore(newData as AssessmentData);
         setResult(riskResult);
-        await saveAssessment(newData as AssessmentData, riskResult);
+        setMode("result");
+        setAiLoading(true);
+        const explanation = await generateAIExplanation(newData as AssessmentData, riskResult);
+        setAiExplanation(explanation);
+        setAiLoading(false);
+        await saveAssessment(newData as AssessmentData, riskResult, explanation);
 
         toast({ title: "Report processed successfully", description: "Clinical values extracted and risk score calculated." });
-        setMode("result");
       }
     } catch (err) {
       console.error("Upload error:", err);
@@ -313,7 +347,7 @@ const AssessmentPage = () => {
         <Navbar />
         <div className="mx-auto max-w-4xl px-6 py-12">
           <h1 className="mb-8 text-3xl font-bold text-foreground">Risk Assessment Results</h1>
-          <RiskResultView result={result} onReset={handleReset} data={data} />
+          <RiskResultView result={result} onReset={handleReset} data={data} aiExplanation={aiExplanation} aiLoading={aiLoading} />
         </div>
       </div>
     );

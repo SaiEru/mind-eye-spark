@@ -1,12 +1,14 @@
 import Navbar from "@/components/Navbar";
-import { FileText, Search, Calendar, ChevronDown, ChevronUp, User } from "lucide-react";
+import { FileText, Search, Calendar, ChevronDown, ChevronUp, User, Brain, Download, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
+import { generatePdfReport } from "@/lib/generatePdfReport";
 
 const riskBadgeVariant = (level: string) => {
   if (level === "High" || level === "Critical") return "destructive" as const;
@@ -15,8 +17,11 @@ const riskBadgeVariant = (level: string) => {
 };
 
 const DoctorReportsPage = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [search, setSearch] = useState("");
+  const [riskFilter, setRiskFilter] = useState("all");
+  const [surgeryFilter, setSurgeryFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState("all");
   const [assessments, setAssessments] = useState<any[]>([]);
   const [patients, setPatients] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
@@ -38,14 +43,65 @@ const DoctorReportsPage = () => {
     load();
   }, [user]);
 
-  const filtered = assessments.filter(
-    (a) =>
-      (a.patient_name || "").toLowerCase().includes(search.toLowerCase()) ||
-      a.id.toLowerCase().includes(search.toLowerCase())
-  );
+  const surgeryTypes = useMemo(() => {
+    const types = new Set<string>();
+    assessments.forEach((a) => { if (a.surgery_type) types.add(a.surgery_type); });
+    return Array.from(types);
+  }, [assessments]);
 
-  const toggleExpand = (id: string) => {
-    setExpandedId(expandedId === id ? null : id);
+  const filtered = useMemo(() => {
+    return assessments.filter((a) => {
+      if (search && !(a.patient_name || "").toLowerCase().includes(search.toLowerCase())) return false;
+      if (riskFilter !== "all" && a.risk_level !== riskFilter) return false;
+      if (surgeryFilter !== "all" && a.surgery_type !== surgeryFilter) return false;
+      if (dateFilter !== "all") {
+        const d = new Date(a.created_at);
+        const now = new Date();
+        if (dateFilter === "7") { const cutoff = new Date(now.getTime() - 7 * 86400000); if (d < cutoff) return false; }
+        if (dateFilter === "30") { const cutoff = new Date(now.getTime() - 30 * 86400000); if (d < cutoff) return false; }
+        if (dateFilter === "90") { const cutoff = new Date(now.getTime() - 90 * 86400000); if (d < cutoff) return false; }
+      }
+      return true;
+    });
+  }, [assessments, search, riskFilter, surgeryFilter, dateFilter]);
+
+  const handlePdfDownload = (a: any) => {
+    const ad = a.assessment_data as any;
+    const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+    generatePdfReport({
+      patientName: a.patient_name || "Unknown",
+      patientAge: ad?.age || "",
+      patientGender: ad?.gender || "",
+      patientContact: ad?.contactNumber || "",
+      diagnosis: "",
+      surgeryType: ad?.surgeryType || a.surgery_type || "",
+      eyeSide: ad?.eyeSide || "",
+      anesthesiaType: ad?.anesthesiaType || "",
+      surgeryDate: ad?.surgeryDate || "",
+      surgeonName: ad?.surgeonName || "",
+      diabetes: ad?.diabetes || "None",
+      hypertension: ad?.hypertension || false,
+      immunocompromised: ad?.immunocompromised || false,
+      previousEyeSurgery: ad?.previousEyeSurgery || false,
+      allergies: ad?.allergies || "",
+      currentMedications: ad?.currentMedications || "",
+      preVisualAcuity: ad?.preVisualAcuity || "",
+      intraocularPressure: ad?.intraocularPressure || "",
+      postVisualAcuity: ad?.postVisualAcuity || "",
+      postIntraocularPressure: ad?.postIntraocularPressure || "",
+      cornealEdema: ad?.cornealEdema || "",
+      anteriorChamberReaction: ad?.anteriorChamberReaction || "",
+      woundIntegrity: ad?.woundIntegrity || "",
+      painLevel: ad?.painLevel || "",
+      riskScore: a.risk_score,
+      riskLevel: a.risk_level,
+      riskExplanation: explanation,
+      followUpDate: ad?.followUpDate || "",
+      clinicianNotes: ad?.clinicianNotes || "",
+      doctorName: profile?.full_name || "",
+      doctorLicense: profile?.license_number || "",
+      createdAt: a.created_at,
+    });
   };
 
   return (
@@ -53,11 +109,40 @@ const DoctorReportsPage = () => {
       <Navbar />
       <div className="mx-auto max-w-5xl px-6 py-10">
         <h1 className="text-3xl font-bold text-foreground">My Assessment Reports</h1>
-        <p className="mt-2 text-muted-foreground">Click on a patient name to view full details and assessment data.</p>
+        <p className="mt-2 text-muted-foreground">Click on a report to view full details. Use filters to narrow results.</p>
 
-        <div className="mt-8 relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search by patient name..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+        {/* Filters */}
+        <div className="mt-6 flex flex-wrap items-end gap-3">
+          <div className="flex-1 min-w-[200px] relative">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input placeholder="Search patient name..." className="pl-10" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Select value={riskFilter} onValueChange={setRiskFilter}>
+            <SelectTrigger className="w-[140px]"><Filter className="h-3 w-3 mr-1" /><SelectValue placeholder="Risk Level" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Risks</SelectItem>
+              <SelectItem value="Low">Low</SelectItem>
+              <SelectItem value="Medium">Medium</SelectItem>
+              <SelectItem value="High">High</SelectItem>
+              <SelectItem value="Critical">Critical</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={surgeryFilter} onValueChange={setSurgeryFilter}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Surgery Type" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Surgeries</SelectItem>
+              {surgeryTypes.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={dateFilter} onValueChange={setDateFilter}>
+            <SelectTrigger className="w-[150px]"><Calendar className="h-3 w-3 mr-1" /><SelectValue placeholder="Date Range" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
+              <SelectItem value="7">Last 7 Days</SelectItem>
+              <SelectItem value="30">Last 30 Days</SelectItem>
+              <SelectItem value="90">Last 90 Days</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -65,8 +150,8 @@ const DoctorReportsPage = () => {
         ) : filtered.length === 0 ? (
           <div className="mt-8 rounded-xl border border-border bg-card p-12 text-center shadow-sm">
             <FileText className="mx-auto h-12 w-12 text-muted-foreground/40" />
-            <h3 className="mt-4 text-lg font-semibold text-foreground">No reports yet</h3>
-            <p className="mt-2 text-muted-foreground">Complete patient assessments to see reports here.</p>
+            <h3 className="mt-4 text-lg font-semibold text-foreground">No reports found</h3>
+            <p className="mt-2 text-muted-foreground">Try adjusting your filters or complete an assessment.</p>
           </div>
         ) : (
           <div className="mt-6 space-y-4">
@@ -74,14 +159,11 @@ const DoctorReportsPage = () => {
               const isExpanded = expandedId === a.id;
               const ad = a.assessment_data as any;
               const patient = a.patient_id ? patients[a.patient_id] : null;
+              const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
 
               return (
                 <div key={a.id} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all">
-                  {/* Header row - clickable */}
-                  <button
-                    onClick={() => toggleExpand(a.id)}
-                    className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors"
-                  >
+                  <button onClick={() => setExpandedId(isExpanded ? null : a.id)} className="w-full flex items-center justify-between p-5 text-left hover:bg-muted/30 transition-colors">
                     <div className="flex items-start gap-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
                         <FileText className="h-5 w-5 text-primary" />
@@ -101,31 +183,33 @@ const DoctorReportsPage = () => {
                     {isExpanded ? <ChevronUp className="h-5 w-5 text-muted-foreground" /> : <ChevronDown className="h-5 w-5 text-muted-foreground" />}
                   </button>
 
-                  {/* Expanded detail */}
                   {isExpanded && (
                     <div className="border-t border-border p-5 space-y-5 bg-muted/10">
-                      {/* Patient basic info */}
+                      {/* AI Explanation */}
+                      {explanation.length > 0 && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-primary" />AI Risk Explanation
+                          </h4>
+                          <ul className="space-y-1">
+                            {explanation.map((b: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                                {b}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Patient info */}
                       <div>
-                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
-                          <User className="h-4 w-4 text-primary" />Patient Information
-                        </h4>
+                        <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2"><User className="h-4 w-4 text-primary" />Patient Information</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          <div className="rounded-lg border border-border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">Name</p>
-                            <p className="text-sm font-medium text-foreground">{a.patient_name || ad?.fullName || "—"}</p>
-                          </div>
-                          <div className="rounded-lg border border-border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">Age</p>
-                            <p className="text-sm font-medium text-foreground">{ad?.age || patient?.age || "—"}</p>
-                          </div>
-                          <div className="rounded-lg border border-border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">Gender</p>
-                            <p className="text-sm font-medium text-foreground">{ad?.gender || patient?.gender || "—"}</p>
-                          </div>
-                          <div className="rounded-lg border border-border bg-card p-3">
-                            <p className="text-xs text-muted-foreground">Contact</p>
-                            <p className="text-sm font-medium text-foreground">{ad?.contactNumber || patient?.contact_number || "—"}</p>
-                          </div>
+                          <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Name</p><p className="text-sm font-medium text-foreground">{a.patient_name || ad?.fullName || "—"}</p></div>
+                          <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Age</p><p className="text-sm font-medium text-foreground">{ad?.age || patient?.age || "—"}</p></div>
+                          <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Gender</p><p className="text-sm font-medium text-foreground">{ad?.gender || patient?.gender || "—"}</p></div>
+                          <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Contact</p><p className="text-sm font-medium text-foreground">{ad?.contactNumber || patient?.contact_number || "—"}</p></div>
                         </div>
                       </div>
 
@@ -138,7 +222,6 @@ const DoctorReportsPage = () => {
                             {ad.surgeonName && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Surgeon</p><p className="text-sm font-medium text-foreground">{ad.surgeonName}</p></div>}
                             {ad.eyeSide && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Eye</p><p className="text-sm font-medium text-foreground">{ad.eyeSide}</p></div>}
                             {ad.anesthesiaType && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Anesthesia</p><p className="text-sm font-medium text-foreground">{ad.anesthesiaType}</p></div>}
-                            {ad.surgeryDate && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Surgery Date</p><p className="text-sm font-medium text-foreground">{ad.surgeryDate}</p></div>}
                           </div>
                         </div>
                       )}
@@ -166,9 +249,7 @@ const DoctorReportsPage = () => {
                             {ad.intraocularPressure && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Pre-op IOP</p><p className="text-sm font-medium text-foreground">{ad.intraocularPressure} mmHg</p></div>}
                             {ad.postIntraocularPressure && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Post-op IOP</p><p className="text-sm font-medium text-foreground">{ad.postIntraocularPressure} mmHg</p></div>}
                             {ad.cornealEdema && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Corneal Edema</p><p className="text-sm font-medium text-foreground">{ad.cornealEdema}</p></div>}
-                            {ad.anteriorChamberReaction && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">AC Reaction</p><p className="text-sm font-medium text-foreground">{ad.anteriorChamberReaction}</p></div>}
                             {ad.woundIntegrity && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Wound Integrity</p><p className="text-sm font-medium text-foreground">{ad.woundIntegrity}</p></div>}
-                            {ad.painLevel && <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">Pain Level</p><p className="text-sm font-medium text-foreground">{ad.painLevel}/10</p></div>}
                           </div>
                         </div>
                       )}
@@ -188,19 +269,22 @@ const DoctorReportsPage = () => {
                               <span className="text-sm text-muted-foreground">No symptoms reported</span>
                             )}
                           </div>
-                          {ad.additionalSymptoms && (
-                            <p className="mt-2 text-sm text-muted-foreground">Additional: {ad.additionalSymptoms}</p>
-                          )}
                         </div>
                       )}
 
-                      {/* Clinician notes */}
+                      {/* Notes */}
                       {ad?.clinicianNotes && (
                         <div className="rounded-lg border border-border bg-card p-4">
                           <p className="text-xs text-muted-foreground mb-1">Clinician Notes</p>
                           <p className="text-sm text-foreground">{ad.clinicianNotes}</p>
                         </div>
                       )}
+
+                      {/* Download PDF */}
+                      <Button variant="outline" className="gap-2" onClick={() => handlePdfDownload(a)}>
+                        <Download className="h-4 w-4" />
+                        Download PDF Report
+                      </Button>
                     </div>
                   )}
                 </div>
