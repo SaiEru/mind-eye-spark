@@ -135,11 +135,18 @@ const AssessmentPage = () => {
     setData((prev) => ({ ...prev, ...partial }));
   };
 
+  const [aiExplanation, setAiExplanation] = useState<string[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+
   const handleAnalyze = async () => {
     const r = calculateRiskScore(data);
     setResult(r);
     setMode("result");
-    await saveAssessment(data, r);
+    setAiLoading(true);
+    const explanation = await generateAIExplanation(data, r);
+    setAiExplanation(explanation);
+    setAiLoading(false);
+    await saveAssessment(data, r, explanation);
   };
 
   const handleReset = () => {
