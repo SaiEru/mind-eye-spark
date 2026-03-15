@@ -162,6 +162,7 @@ const DoctorReportsPage = () => {
               const ad = a.assessment_data as any;
               const patient = a.patient_id ? patients[a.patient_id] : null;
               const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+              const clinicalSteps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
 
               return (
                 <div key={a.id} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all">
