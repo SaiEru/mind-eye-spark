@@ -128,7 +128,7 @@ const AssessmentPage = () => {
     }
   };
 
-  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult, explanation: string[] = []) => {
+  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult, explanation: string[] = [], steps: string[] = []) => {
     if (!user) return;
     await supabase.from("assessments").insert({
       doctor_id: user.id,
@@ -140,6 +140,7 @@ const AssessmentPage = () => {
       surgery_type: assessmentData.surgeryType || "",
       status: "Completed",
       risk_explanation: explanation.join("\n"),
+      clinical_steps: steps.join("\n"),
     } as any);
   };
 
