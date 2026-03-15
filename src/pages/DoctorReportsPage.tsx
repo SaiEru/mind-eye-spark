@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import { FileText, Search, Calendar, ChevronDown, ChevronUp, User, Brain, Download, Filter } from "lucide-react";
+import { FileText, Search, Calendar, ChevronDown, ChevronUp, User, Brain, Download, Filter, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
