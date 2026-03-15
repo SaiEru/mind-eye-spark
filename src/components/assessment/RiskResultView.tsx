@@ -1,15 +1,20 @@
 import { RiskResult, AssessmentData } from "@/types/assessment";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AlertTriangle, CheckCircle2, Shield, TrendingUp, Download, FileText, Loader2, Brain } from "lucide-react";
+import { AlertTriangle, CheckCircle2, TrendingUp, Download, FileText, Loader2, Brain, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { generatePdfReport } from "@/lib/generatePdfReport";
+
+type CategorizedItem = { category: string; points?: string[]; steps?: string[] };
 
 type Props = {
   result: RiskResult;
   onReset: () => void;
   data?: AssessmentData;
   aiExplanation?: string[];
+  aiExplanationCategorized?: CategorizedItem[];
+  clinicalStepsCategorized?: CategorizedItem[];
+  clinicalStepsFlat?: string[];
   aiLoading?: boolean;
   doctorName?: string;
   doctorLicense?: string;
@@ -22,75 +27,11 @@ const riskColors: Record<string, string> = {
   Critical: "bg-destructive",
 };
 
-function generateReportText(result: RiskResult, data?: AssessmentData, aiExplanation?: string[]): string {
-  const lines: string[] = [];
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push("     EYE COMPLICATION RISK ASSESSMENT REPORT");
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push(`Date: ${new Date().toLocaleString()}`);
-  lines.push("");
-
-  if (data) {
-    lines.push("── PATIENT INFORMATION ──────────────────────────────");
-    if (data.patientId) lines.push(`Patient ID:      ${data.patientId}`);
-    if (data.fullName) lines.push(`Full Name:       ${data.fullName}`);
-    if (data.age) lines.push(`Age:             ${data.age}`);
-    if (data.gender) lines.push(`Gender:          ${data.gender}`);
-    if (data.contactNumber) lines.push(`Contact:         ${data.contactNumber}`);
-    lines.push("");
-  }
-
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push("     RISK ASSESSMENT RESULTS");
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push(`Overall Risk Score:  ${result.overallScore} / 100`);
-  lines.push(`Risk Level:          ${result.riskLevel}`);
-  lines.push("");
-
-  if (aiExplanation && aiExplanation.length > 0) {
-    lines.push("── AI RISK EXPLANATION ────────────────────────────");
-    aiExplanation.forEach((b) => lines.push(`  • ${b}`));
-    lines.push("");
-  }
-
-  lines.push(`Analysis: ${result.explanation}`);
-  lines.push("");
-
-  if (result.factors.length > 0) {
-    lines.push("── CONTRIBUTING RISK FACTORS ───────────────────────");
-    result.factors.forEach((f) => {
-      lines.push(`  • ${f.name} (+${f.contribution} pts)`);
-      lines.push(`    ${f.detail}`);
-    });
-    lines.push("");
-  }
-
-  lines.push("── RECOMMENDATIONS ────────────────────────────────");
-  result.recommendations.forEach((r) => lines.push(`  • ${r}`));
-  lines.push("");
-  lines.push("═══════════════════════════════════════════════════════");
-  lines.push("DISCLAIMER: For demonstration purposes only.");
-  lines.push("═══════════════════════════════════════════════════════");
-
-  return lines.join("\n");
-}
-
-function downloadTextReport(result: RiskResult, data?: AssessmentData, aiExplanation?: string[]) {
-  const text = generateReportText(result, data, aiExplanation);
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  const patientName = data?.fullName || data?.patientId || "patient";
-  const date = new Date().toISOString().split("T")[0];
-  a.download = `risk-assessment-${patientName.replace(/\s+/g, "-").toLowerCase()}-${date}.txt`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading = false, doctorName = "", doctorLicense = "" }: Props) => {
+const RiskResultView = ({
+  result, onReset, data,
+  aiExplanation = [], aiExplanationCategorized = [], clinicalStepsCategorized = [], clinicalStepsFlat = [],
+  aiLoading = false, doctorName = "", doctorLicense = ""
+}: Props) => {
   const handlePdfDownload = () => {
     generatePdfReport({
       patientName: data?.fullName || "Unknown",
@@ -120,6 +61,7 @@ const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading =
       riskScore: result.overallScore,
       riskLevel: result.riskLevel,
       riskExplanation: aiExplanation,
+      clinicalSteps: clinicalStepsFlat,
       followUpDate: data?.followUpDate || "",
       clinicianNotes: data?.clinicianNotes || "",
       doctorName,
@@ -127,6 +69,44 @@ const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading =
       createdAt: new Date().toISOString(),
     });
   };
+
+  const downloadTextReport = () => {
+    const lines: string[] = [];
+    lines.push("═══════════════════════════════════════════════════════");
+    lines.push("     EYE COMPLICATION RISK ASSESSMENT REPORT");
+    lines.push("═══════════════════════════════════════════════════════");
+    lines.push(`Date: ${new Date().toLocaleString()}`);
+    lines.push("");
+    lines.push(`Overall Risk Score: ${result.overallScore}/100`);
+    lines.push(`Risk Level: ${result.riskLevel}`);
+    lines.push("");
+    if (aiExplanation.length > 0) {
+      lines.push("── AI RISK EXPLANATION ────────────────────────────");
+      aiExplanation.forEach((b) => lines.push(`  • ${b}`));
+      lines.push("");
+    }
+    if (clinicalStepsFlat.length > 0) {
+      lines.push("── AI CLINICAL STEPS PREDICTION ───────────────────");
+      clinicalStepsFlat.forEach((s) => lines.push(`  ▸ ${s}`));
+      lines.push("");
+    }
+    lines.push("═══════════════════════════════════════════════════════");
+    lines.push("DISCLAIMER: For demonstration purposes only.");
+    const text = lines.join("\n");
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const patientName = data?.fullName || data?.patientId || "patient";
+    a.download = `risk-assessment-${patientName.replace(/\s+/g, "-").toLowerCase()}-${new Date().toISOString().split("T")[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const hasCategories = aiExplanationCategorized.length > 0;
+  const hasClinicalSteps = clinicalStepsCategorized.length > 0;
 
   return (
     <div className="space-y-6 animate-fade-up">
@@ -145,7 +125,7 @@ const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading =
         </Badge>
       </div>
 
-      {/* AI Risk Explanation */}
+      {/* AI Risk Explanation with categories */}
       <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           <Brain className="h-5 w-5 text-primary" />
@@ -154,7 +134,23 @@ const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading =
         {aiLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Generating AI clinical explanation...
+            Generating AI clinical analysis...
+          </div>
+        ) : hasCategories ? (
+          <div className="space-y-4">
+            {aiExplanationCategorized.map((cat, idx) => (
+              <div key={idx}>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-primary mb-2">{cat.category}</h4>
+                <ul className="space-y-1.5 ml-1">
+                  {(cat.points || []).map((point, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                      {point}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
         ) : aiExplanation.length > 0 ? (
           <ul className="space-y-2">
@@ -167,6 +163,47 @@ const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading =
           </ul>
         ) : (
           <p className="text-sm text-muted-foreground">{result.explanation}</p>
+        )}
+      </div>
+
+      {/* AI Clinical Steps Prediction */}
+      <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+        <div className="mb-3 flex items-center gap-2">
+          <Stethoscope className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold text-foreground">AI Clinical Steps Prediction</h3>
+        </div>
+        {aiLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Generating clinical recommendations...
+          </div>
+        ) : hasClinicalSteps ? (
+          <div className="space-y-4">
+            {clinicalStepsCategorized.map((cat, idx) => (
+              <div key={idx}>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-primary mb-2">{cat.category}</h4>
+                <ul className="space-y-1.5 ml-1">
+                  {(cat.steps || []).map((step, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <span className="mt-1.5 h-0 w-0 border-l-[5px] border-t-[4px] border-b-[4px] border-l-primary border-t-transparent border-b-transparent shrink-0" />
+                      {step}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        ) : clinicalStepsFlat.length > 0 ? (
+          <ul className="space-y-2">
+            {clinicalStepsFlat.map((step, i) => (
+              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                <span className="mt-1.5 h-0 w-0 border-l-[5px] border-t-[4px] border-b-[4px] border-l-primary border-t-transparent border-b-transparent shrink-0" />
+                {step}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">No clinical steps generated yet.</p>
         )}
       </div>
 
@@ -219,7 +256,7 @@ const RiskResultView = ({ result, onReset, data, aiExplanation = [], aiLoading =
           <FileText className="h-4 w-4" />
           Download PDF
         </Button>
-        <Button variant="outline" className="gap-2" onClick={() => downloadTextReport(result, data, aiExplanation)}>
+        <Button variant="outline" className="gap-2" onClick={downloadTextReport}>
           <Download className="h-4 w-4" />
           Download TXT
         </Button>

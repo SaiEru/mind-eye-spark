@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import { FileText, Search, Calendar, ChevronDown, ChevronUp, User, Brain, Download, Filter } from "lucide-react";
+import { FileText, Search, Calendar, ChevronDown, ChevronUp, User, Brain, Download, Filter, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -68,6 +68,7 @@ const DoctorReportsPage = () => {
   const handlePdfDownload = (a: any) => {
     const ad = a.assessment_data as any;
     const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+    const steps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
     generatePdfReport({
       patientName: a.patient_name || "Unknown",
       patientAge: ad?.age || "",
@@ -96,6 +97,7 @@ const DoctorReportsPage = () => {
       riskScore: a.risk_score,
       riskLevel: a.risk_level,
       riskExplanation: explanation,
+      clinicalSteps: steps,
       followUpDate: ad?.followUpDate || "",
       clinicianNotes: ad?.clinicianNotes || "",
       doctorName: profile?.full_name || "",
@@ -160,6 +162,7 @@ const DoctorReportsPage = () => {
               const ad = a.assessment_data as any;
               const patient = a.patient_id ? patients[a.patient_id] : null;
               const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+              const clinicalSteps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
 
               return (
                 <div key={a.id} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden transition-all">
@@ -202,7 +205,23 @@ const DoctorReportsPage = () => {
                         </div>
                       )}
 
-                      {/* Patient info */}
+                      {/* Clinical Steps */}
+                      {clinicalSteps.length > 0 && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                            <Stethoscope className="h-4 w-4 text-primary" />AI Clinical Steps Prediction
+                          </h4>
+                          <ul className="space-y-1">
+                            {clinicalSteps.map((s: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className="mt-1.5 h-0 w-0 border-l-[5px] border-t-[4px] border-b-[4px] border-l-primary border-t-transparent border-b-transparent shrink-0" />
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       <div>
                         <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2"><User className="h-4 w-4 text-primary" />Patient Information</h4>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

@@ -13,15 +13,25 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const systemPrompt = `You are a clinical ophthalmology AI assistant. Given patient assessment data, risk score, and risk factors, generate a concise clinical risk explanation as a bullet-point list. Each bullet should be a clear, clinical observation explaining why the risk score is what it is. Focus on:
-- Demographics risks (age, gender, diabetes, hypertension)
-- Surgery-related risks (type, eye, anesthesia)
-- Medical history concerns (previous surgery, immunocompromised)
-- Pre-operative values (IOP, visual acuity)
-- Post-operative findings (post-op IOP, VA, corneal edema, wound integrity)
-- Symptoms (pain, redness, blurred vision, photophobia, floaters)
+    const systemPrompt = `You are a clinical ophthalmology AI assistant. Given patient assessment data, risk score, and risk factors, generate TWO outputs:
 
-Return ONLY a JSON array of strings, each being one bullet point observation. Return 3-8 bullet points. No markdown, no extra text, just the JSON array.`;
+1. **Categorized Risk Explanation** — A detailed clinical risk explanation organized into categories with subheadings. Each category should have multiple bullet points. Categories:
+   - Demographics & General Health
+   - Surgery & Anesthesia
+   - Medical History & Comorbidities
+   - Pre-Operative Assessment
+   - Post-Operative Findings
+   - Symptoms & Complaints
+
+2. **Clinical Steps Prediction** — Based on the risk level and clinical data, suggest actionable next medical steps the doctor should take. Categories:
+   - Immediate Actions (urgent interventions if any)
+   - Monitoring Plan (what parameters to monitor, how often)
+   - Follow-Up Schedule (recommended visit timing)
+   - Recommended Examinations (additional tests or imaging)
+   - Medication Adjustments (if applicable)
+   - Patient Education (counseling points)
+
+Provide 8-15 bullet points for the risk explanation (across all categories) and 6-12 bullet points for clinical steps (across all categories). Each bullet should be a clear, concise clinical statement. For clinical steps, use actionable language (e.g., "Monitor IOP every 2 hours for 24 hours", "Schedule follow-up within 48 hours").`;
 
     const userPrompt = `Patient Assessment Data:
 ${JSON.stringify(assessmentData, null, 2)}
@@ -30,7 +40,7 @@ Calculated Risk Score: ${riskScore}/100
 Risk Level: ${riskLevel}
 Contributing Factors: ${JSON.stringify(factors)}
 
-Generate clinical risk explanation bullet points.`;
+Generate categorized risk explanation and clinical steps prediction.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -48,24 +58,45 @@ Generate clinical risk explanation bullet points.`;
           {
             type: "function",
             function: {
-              name: "return_explanation",
-              description: "Return the clinical risk explanation as bullet points",
+              name: "return_analysis",
+              description: "Return the categorized risk explanation and clinical steps",
               parameters: {
                 type: "object",
                 properties: {
-                  bullets: {
+                  riskExplanation: {
                     type: "array",
-                    items: { type: "string" },
-                    description: "Array of clinical observation bullet points"
+                    items: {
+                      type: "object",
+                      properties: {
+                        category: { type: "string", description: "Category heading e.g. Demographics & General Health" },
+                        points: { type: "array", items: { type: "string" }, description: "Bullet points for this category" }
+                      },
+                      required: ["category", "points"],
+                      additionalProperties: false
+                    },
+                    description: "Categorized risk explanation with subheadings"
+                  },
+                  clinicalSteps: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        category: { type: "string", description: "Category heading e.g. Immediate Actions" },
+                        steps: { type: "array", items: { type: "string" }, description: "Action steps for this category" }
+                      },
+                      required: ["category", "steps"],
+                      additionalProperties: false
+                    },
+                    description: "Clinical steps prediction with categories"
                   }
                 },
-                required: ["bullets"],
+                required: ["riskExplanation", "clinicalSteps"],
                 additionalProperties: false
               }
             }
           }
         ],
-        tool_choice: { type: "function", function: { name: "return_explanation" } },
+        tool_choice: { type: "function", function: { name: "return_analysis" } },
       }),
     });
 
@@ -87,28 +118,45 @@ Generate clinical risk explanation bullet points.`;
 
     const result = await response.json();
     const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
-    let bullets: string[] = [];
+    let riskExplanation: { category: string; points: string[] }[] = [];
+    let clinicalSteps: { category: string; steps: string[] }[] = [];
 
     if (toolCall?.function?.arguments) {
       try {
         const parsed = JSON.parse(toolCall.function.arguments);
-        bullets = parsed.bullets || [];
+        riskExplanation = parsed.riskExplanation || [];
+        clinicalSteps = parsed.clinicalSteps || [];
       } catch {
-        // fallback: try content
-        const content = result.choices?.[0]?.message?.content || "[]";
-        bullets = JSON.parse(content);
+        const content = result.choices?.[0]?.message?.content || "{}";
+        try {
+          const parsed = JSON.parse(content);
+          riskExplanation = parsed.riskExplanation || [];
+          clinicalSteps = parsed.clinicalSteps || [];
+        } catch {
+          riskExplanation = [{ category: "General", points: [content] }];
+        }
       }
     } else {
-      // fallback
-      const content = result.choices?.[0]?.message?.content || "[]";
+      const content = result.choices?.[0]?.message?.content || "{}";
       try {
-        bullets = JSON.parse(content);
+        const parsed = JSON.parse(content);
+        riskExplanation = parsed.riskExplanation || [];
+        clinicalSteps = parsed.clinicalSteps || [];
       } catch {
-        bullets = [content];
+        riskExplanation = [{ category: "General", points: [content] }];
       }
     }
 
-    return new Response(JSON.stringify({ explanation: bullets }), {
+    // Flatten for backward compatibility storage
+    const flatExplanation = riskExplanation.flatMap(c => c.points);
+    const flatSteps = clinicalSteps.flatMap(c => c.steps);
+
+    return new Response(JSON.stringify({ 
+      explanation: flatExplanation,
+      riskExplanation,
+      clinicalSteps,
+      flatSteps,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

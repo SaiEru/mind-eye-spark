@@ -17,6 +17,7 @@ export type Database = {
       assessments: {
         Row: {
           assessment_data: Json
+          clinical_steps: string | null
           created_at: string | null
           doctor_id: string
           id: string
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           assessment_data?: Json
+          clinical_steps?: string | null
           created_at?: string | null
           doctor_id: string
           id?: string
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           assessment_data?: Json
+          clinical_steps?: string | null
           created_at?: string | null
           doctor_id?: string
           id?: string

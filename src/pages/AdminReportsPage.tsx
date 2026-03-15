@@ -1,5 +1,5 @@
 import Navbar from "@/components/Navbar";
-import { FileText, Search, Calendar, ChevronDown, ChevronUp, Stethoscope, Brain, Download, Filter } from "lucide-react";
+import { FileText, Search, Calendar, ChevronDown, ChevronUp, Stethoscope, Brain, Download, Filter, ClipboardList } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -69,6 +69,7 @@ const AdminReportsPage = () => {
     const ad = a.assessment_data as any;
     const doc = doctors[a.doctor_id] as any;
     const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+    const steps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
     generatePdfReport({
       patientName: a.patient_name || "Unknown",
       patientAge: ad?.age || "",
@@ -97,6 +98,7 @@ const AdminReportsPage = () => {
       riskScore: a.risk_score,
       riskLevel: a.risk_level,
       riskExplanation: explanation,
+      clinicalSteps: steps,
       followUpDate: ad?.followUpDate || "",
       clinicianNotes: ad?.clinicianNotes || "",
       doctorName: doc?.full_name || "",
@@ -231,6 +233,7 @@ const AdminReportsPage = () => {
             {filtered.map((a) => {
               const isExpanded = expandedId === a.id;
               const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+              const clinicalSteps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
               return (
                 <div key={a.id} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                   <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : a.id)}>
@@ -266,6 +269,23 @@ const AdminReportsPage = () => {
                               <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
                                 <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
                                 {b}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Clinical Steps */}
+                      {clinicalSteps.length > 0 && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4 text-primary" />AI Clinical Steps Prediction
+                          </h4>
+                          <ul className="space-y-1">
+                            {clinicalSteps.map((s: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className="mt-1.5 h-0 w-0 border-l-[5px] border-t-[4px] border-b-[4px] border-l-primary border-t-transparent border-b-transparent shrink-0" />
+                                {s}
                               </li>
                             ))}
                           </ul>

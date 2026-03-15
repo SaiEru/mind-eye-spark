@@ -94,7 +94,14 @@ const AssessmentPage = () => {
     loadPatient();
   }, [patientId, user]);
 
-  const generateAIExplanation = async (assessmentData: AssessmentData, riskResult: RiskResult): Promise<string[]> => {
+  type CategorizedItem = { category: string; points?: string[]; steps?: string[] };
+
+  const generateAIExplanation = async (assessmentData: AssessmentData, riskResult: RiskResult): Promise<{
+    flat: string[];
+    categorized: CategorizedItem[];
+    clinicalStepsCategorized: CategorizedItem[];
+    flatSteps: string[];
+  }> => {
     try {
       const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
       const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -108,15 +115,20 @@ const AssessmentPage = () => {
           factors: riskResult.factors,
         }),
       });
-      if (!response.ok) return [];
+      if (!response.ok) return { flat: [], categorized: [], clinicalStepsCategorized: [], flatSteps: [] };
       const data = await response.json();
-      return data.explanation || [];
+      return {
+        flat: data.explanation || [],
+        categorized: data.riskExplanation || [],
+        clinicalStepsCategorized: data.clinicalSteps || [],
+        flatSteps: data.flatSteps || [],
+      };
     } catch {
-      return [];
+      return { flat: [], categorized: [], clinicalStepsCategorized: [], flatSteps: [] };
     }
   };
 
-  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult, explanation: string[] = []) => {
+  const saveAssessment = async (assessmentData: AssessmentData, riskResult: RiskResult, explanation: string[] = [], steps: string[] = []) => {
     if (!user) return;
     await supabase.from("assessments").insert({
       doctor_id: user.id,
@@ -128,6 +140,7 @@ const AssessmentPage = () => {
       surgery_type: assessmentData.surgeryType || "",
       status: "Completed",
       risk_explanation: explanation.join("\n"),
+      clinical_steps: steps.join("\n"),
     } as any);
   };
 
@@ -136,6 +149,9 @@ const AssessmentPage = () => {
   };
 
   const [aiExplanation, setAiExplanation] = useState<string[]>([]);
+  const [aiExplanationCategorized, setAiExplanationCategorized] = useState<CategorizedItem[]>([]);
+  const [clinicalStepsCategorized, setClinicalStepsCategorized] = useState<CategorizedItem[]>([]);
+  const [clinicalStepsFlat, setClinicalStepsFlat] = useState<string[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
 
   const handleAnalyze = async () => {
@@ -143,10 +159,13 @@ const AssessmentPage = () => {
     setResult(r);
     setMode("result");
     setAiLoading(true);
-    const explanation = await generateAIExplanation(data, r);
-    setAiExplanation(explanation);
+    const aiResult = await generateAIExplanation(data, r);
+    setAiExplanation(aiResult.flat);
+    setAiExplanationCategorized(aiResult.categorized);
+    setClinicalStepsCategorized(aiResult.clinicalStepsCategorized);
+    setClinicalStepsFlat(aiResult.flatSteps);
     setAiLoading(false);
-    await saveAssessment(data, r, explanation);
+    await saveAssessment(data, r, aiResult.flat, aiResult.flatSteps);
   };
 
   const handleReset = () => {
@@ -246,10 +265,13 @@ const AssessmentPage = () => {
         setResult(riskResult);
         setMode("result");
         setAiLoading(true);
-        const explanation = await generateAIExplanation(newData as AssessmentData, riskResult);
-        setAiExplanation(explanation);
+        const aiResult = await generateAIExplanation(newData as AssessmentData, riskResult);
+        setAiExplanation(aiResult.flat);
+        setAiExplanationCategorized(aiResult.categorized);
+        setClinicalStepsCategorized(aiResult.clinicalStepsCategorized);
+        setClinicalStepsFlat(aiResult.flatSteps);
         setAiLoading(false);
-        await saveAssessment(newData as AssessmentData, riskResult, explanation);
+        await saveAssessment(newData as AssessmentData, riskResult, aiResult.flat, aiResult.flatSteps);
 
         toast({ title: "Report processed successfully", description: "Clinical values extracted and risk score calculated." });
       }
@@ -347,7 +369,7 @@ const AssessmentPage = () => {
         <Navbar />
         <div className="mx-auto max-w-4xl px-6 py-12">
           <h1 className="mb-8 text-3xl font-bold text-foreground">Risk Assessment Results</h1>
-          <RiskResultView result={result} onReset={handleReset} data={data} aiExplanation={aiExplanation} aiLoading={aiLoading} />
+          <RiskResultView result={result} onReset={handleReset} data={data} aiExplanation={aiExplanation} aiExplanationCategorized={aiExplanationCategorized} clinicalStepsCategorized={clinicalStepsCategorized} clinicalStepsFlat={clinicalStepsFlat} aiLoading={aiLoading} />
         </div>
       </div>
     );

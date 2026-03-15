@@ -1,4 +1,5 @@
 import jsPDF from "jspdf";
+// @ts-ignore
 import "jspdf-autotable";
 
 interface ReportData {
@@ -29,6 +30,7 @@ interface ReportData {
   riskScore: number;
   riskLevel: string;
   riskExplanation: string[];
+  clinicalSteps?: string[];
   followUpDate: string;
   clinicianNotes: string;
   doctorName: string;
@@ -145,6 +147,19 @@ export function generatePdfReport(data: ReportData) {
     data.riskExplanation.forEach((bullet) => {
       if (y > 275) { doc.addPage(); y = 15; }
       const lines = doc.splitTextToSize(`• ${bullet}`, pageWidth - 40);
+      doc.text(lines, 18, y);
+      y += lines.length * 5 + 2;
+    });
+    y += 4;
+  }
+
+  // Clinical Steps Prediction
+  if (data.clinicalSteps && data.clinicalSteps.length > 0) {
+    sectionHeader("AI Clinical Steps Prediction");
+    doc.setFontSize(9);
+    data.clinicalSteps.forEach((step) => {
+      if (y > 275) { doc.addPage(); y = 15; }
+      const lines = doc.splitTextToSize(`▸ ${step}`, pageWidth - 40);
       doc.text(lines, 18, y);
       y += lines.length * 5 + 2;
     });
