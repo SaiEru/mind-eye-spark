@@ -69,6 +69,7 @@ const AdminReportsPage = () => {
     const ad = a.assessment_data as any;
     const doc = doctors[a.doctor_id] as any;
     const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+    const steps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
     generatePdfReport({
       patientName: a.patient_name || "Unknown",
       patientAge: ad?.age || "",
@@ -97,6 +98,7 @@ const AdminReportsPage = () => {
       riskScore: a.risk_score,
       riskLevel: a.risk_level,
       riskExplanation: explanation,
+      clinicalSteps: steps,
       followUpDate: ad?.followUpDate || "",
       clinicianNotes: ad?.clinicianNotes || "",
       doctorName: doc?.full_name || "",
