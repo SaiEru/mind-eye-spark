@@ -233,6 +233,7 @@ const AdminReportsPage = () => {
             {filtered.map((a) => {
               const isExpanded = expandedId === a.id;
               const explanation = a.risk_explanation ? a.risk_explanation.split("\n").filter(Boolean) : [];
+              const clinicalSteps = a.clinical_steps ? a.clinical_steps.split("\n").filter(Boolean) : [];
               return (
                 <div key={a.id} className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
                   <div className="flex items-center justify-between p-5 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setExpandedId(isExpanded ? null : a.id)}>
