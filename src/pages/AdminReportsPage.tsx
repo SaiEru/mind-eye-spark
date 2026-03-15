@@ -275,6 +275,23 @@ const AdminReportsPage = () => {
                         </div>
                       )}
 
+                      {/* Clinical Steps */}
+                      {clinicalSteps.length > 0 && (
+                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                          <h4 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                            <ClipboardList className="h-4 w-4 text-primary" />AI Clinical Steps Prediction
+                          </h4>
+                          <ul className="space-y-1">
+                            {clinicalSteps.map((s: string, i: number) => (
+                              <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                                <span className="mt-1.5 h-0 w-0 border-l-[5px] border-t-[4px] border-b-[4px] border-l-primary border-t-transparent border-b-transparent shrink-0" />
+                                {s}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
                       <h3 className="text-sm font-semibold text-foreground">Full Assessment Details</h3>
                       {renderAssessmentData(a.assessment_data)}
 
