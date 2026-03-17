@@ -28,9 +28,16 @@ serve(async (req) => {
 
     if (downloadError || !fileData) throw new Error("Failed to download video: " + downloadError?.message);
 
-    // Convert to base64
+    // Convert to base64 in chunks to avoid stack overflow
     const arrayBuffer = await fileData.arrayBuffer();
-    const base64Video = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    const chunkSize = 8192;
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      const chunk = bytes.subarray(i, i + chunkSize);
+      binary += String.fromCharCode(...chunk);
+    }
+    const base64Video = btoa(binary);
     const mimeType = videoPath.endsWith(".webm") ? "video/webm" : videoPath.endsWith(".mov") ? "video/quicktime" : "video/mp4";
 
     const systemPrompt = `You are a hospital operations AI analyst. Analyze the provided video from a hospital corridor, waiting room, or clinical area. Provide a comprehensive JSON analysis.
