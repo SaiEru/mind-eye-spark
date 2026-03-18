@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Upload, Video, Users, AlertTriangle, Clock, Eye, Activity,
   ShieldAlert, Loader2, BarChart3, Waypoints, Accessibility,
-  SprayCan, Siren, PackageSearch, Lightbulb, MapPin, Trash2
+  SprayCan, Siren, PackageSearch, MapPin, Trash2
 } from "lucide-react";
 
 interface Bottleneck {
@@ -374,27 +374,6 @@ const AdminVideoAnalyzerPage = () => {
               </Card>
             </div>
 
-            {/* Recommendations */}
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4 text-yellow-500" /> AI Recommendations
-                </CardTitle>
-                <CardDescription>Actionable insights to improve patient flow and resource allocation</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {analysis.recommendations?.map((rec, i) => (
-                    <div key={i} className="flex items-start gap-3 rounded-lg border border-border bg-muted/20 p-4">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
-                        {i + 1}
-                      </span>
-                      <p className="text-sm text-foreground">{rec}</p>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
           </div>
         )}
       </div>

@@ -44,7 +44,7 @@ const AppRoutes = () => {
       <Route path="/admin/dashboard" element={<ProtectedRoute allowedRole="admin"><AdminDashboardPage /></ProtectedRoute>} />
       <Route path="/admin/doctors" element={<ProtectedRoute allowedRole="admin"><AdminDoctorsPage /></ProtectedRoute>} />
       <Route path="/admin/reports" element={<ProtectedRoute allowedRole="admin"><AdminReportsPage /></ProtectedRoute>} />
-      <Route path="/admin/governance" element={<ProtectedRoute allowedRole="admin"><GovernancePage /></ProtectedRoute>} />
+      
       <Route path="/admin/video-analyzer" element={<ProtectedRoute allowedRole="admin"><AdminVideoAnalyzerPage /></ProtectedRoute>} />
 
       {/* Doctor routes */}
@@ -52,7 +52,7 @@ const AppRoutes = () => {
       <Route path="/doctor/assessment" element={<ProtectedRoute allowedRole="doctor"><AssessmentPage /></ProtectedRoute>} />
       <Route path="/doctor/reports" element={<ProtectedRoute allowedRole="doctor"><DoctorReportsPage /></ProtectedRoute>} />
       <Route path="/doctor/profile" element={<ProtectedRoute allowedRole="doctor"><DoctorProfilePage /></ProtectedRoute>} />
-      <Route path="/doctor/governance" element={<ProtectedRoute allowedRole="doctor"><GovernancePage /></ProtectedRoute>} />
+      
 
       <Route path="*" element={<NotFound />} />
     </Routes>
