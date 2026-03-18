@@ -52,7 +52,7 @@ const AppRoutes = () => {
       <Route path="/doctor/assessment" element={<ProtectedRoute allowedRole="doctor"><AssessmentPage /></ProtectedRoute>} />
       <Route path="/doctor/reports" element={<ProtectedRoute allowedRole="doctor"><DoctorReportsPage /></ProtectedRoute>} />
       <Route path="/doctor/profile" element={<ProtectedRoute allowedRole="doctor"><DoctorProfilePage /></ProtectedRoute>} />
-      <Route path="/doctor/governance" element={<ProtectedRoute allowedRole="doctor"><GovernancePage /></ProtectedRoute>} />
+      
 
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -9,7 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Upload, Video, Users, AlertTriangle, Clock, Eye, Activity,
   ShieldAlert, Loader2, BarChart3, Waypoints, Accessibility,
-  SprayCan, Siren, PackageSearch, Lightbulb, MapPin, Trash2
+  SprayCan, Siren, PackageSearch, MapPin, Trash2
 } from "lucide-react";
 
 interface Bottleneck {

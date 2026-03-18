@@ -1,4 +1,4 @@
-import { Eye, Activity, BarChart3, FileText, Shield, LogOut, User, Stethoscope, Video } from "lucide-react";
+import { Eye, Activity, BarChart3, FileText, LogOut, User, Stethoscope, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useLocation, Link } from "react-router-dom";
 import { forwardRef } from "react";
