@@ -2,10 +2,11 @@ import Navbar from "@/components/Navbar";
 import { Activity, AlertTriangle, TrendingUp, Camera, Users, Stethoscope } from "lucide-react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, PieChart, Pie, Cell,
+  PieChart, Pie, Cell,
 } from "recharts";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { motion } from "framer-motion";
 
 const AdminDashboardPage = () => {
   const [stats, setStats] = useState({ totalDoctors: 0, totalPatients: 0, totalAssessments: 0, highRiskCount: 0 });
@@ -41,7 +42,7 @@ const AdminDashboardPage = () => {
 
   const pieData = Object.entries(surgeryBreakdown).map(([name, value], i) => ({
     name, value,
-    color: ["hsl(221, 83%, 53%)", "hsl(130, 60%, 45%)", "hsl(40, 90%, 55%)", "hsl(0, 70%, 55%)"][i % 4],
+    color: ["#6366f1", "#22c55e", "#f59e0b", "#ef4444"][i % 4],
   }));
 
   const riskBreakdown = assessments.reduce((acc: Record<string, number>, a: any) => {
@@ -52,78 +53,117 @@ const AdminDashboardPage = () => {
   const riskData = Object.entries(riskBreakdown).map(([name, count]) => ({ name, count }));
 
   const statCards = [
-    { label: "Total Doctors", value: stats.totalDoctors.toString(), icon: Stethoscope, iconColor: "text-primary" },
-    { label: "Total Patients", value: stats.totalPatients.toString(), icon: Users, iconColor: "text-primary" },
-    { label: "Total Assessments", value: stats.totalAssessments.toString(), icon: Activity, iconColor: "text-primary" },
-    { label: "High-Risk Cases", value: stats.highRiskCount.toString(), icon: AlertTriangle, iconColor: "text-destructive" },
+    { label: "Total Doctors", value: stats.totalDoctors.toString(), icon: Stethoscope },
+    { label: "Total Patients", value: stats.totalPatients.toString(), icon: Users },
+    { label: "Total Assessments", value: stats.totalAssessments.toString(), icon: Activity },
+    { label: "High-Risk Cases", value: stats.highRiskCount.toString(), icon: AlertTriangle },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-black via-zinc-900 to-black text-white">
       <Navbar />
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <h1 className="text-3xl font-bold text-foreground">Hospital Analytics Dashboard</h1>
-        <p className="mt-2 text-muted-foreground">Overview of all doctors, patients, and assessments.</p>
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {statCards.map((s) => (
-            <div key={s.label} className="flex items-start justify-between rounded-xl border border-border bg-card p-5 shadow-sm">
-              <div>
-                <p className="text-sm text-muted-foreground">{s.label}</p>
-                <p className="mt-1 text-3xl font-bold text-foreground">{s.value}</p>
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <motion.h1 
+          initial={{ opacity: 0, y: -20 }} 
+          animate={{ opacity: 1, y: 0 }}
+          className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent"
+        >
+          Hospital Analytics Dashboard
+        </motion.h1>
+
+        <p className="mt-2 text-zinc-400">
+          Overview of all doctors, patients, and assessments.
+        </p>
+
+        {/* STAT CARDS */}
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {statCards.map((s, i) => (
+            <motion.div
+              key={s.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ scale: 1.05 }}
+              className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-lg hover:shadow-2xl"
+            >
+              <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition bg-gradient-to-r from-purple-500/20 to-pink-500/20 blur-xl" />
+
+              <div className="flex items-center justify-between relative z-10">
+                <div>
+                  <p className="text-sm text-zinc-400">{s.label}</p>
+                  <p className="mt-2 text-3xl font-bold">{s.value}</p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-gradient-to-r from-purple-500/20 to-pink-500/20">
+                  <s.icon className="h-6 w-6 text-purple-400" />
+                </div>
               </div>
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <s.icon className={`h-5 w-5 ${s.iconColor}`} />
-              </div>
-            </div>
+            </motion.div>
           ))}
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+        {/* CHARTS */}
+        <div className="mt-10 grid gap-8 lg:grid-cols-2">
           {pieData.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <h3 className="mb-4 font-semibold text-foreground">Surgery Type Distribution</h3>
-              <ResponsiveContainer width="100%" height={250}>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }}
+              className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl"
+            >
+              <h3 className="mb-4 text-lg font-semibold text-purple-300">
+                Surgery Type Distribution
+              </h3>
+
+              <ResponsiveContainer width="100%" height={260}>
                 <PieChart>
-                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={55} outerRadius={85} dataKey="value" paddingAngle={3}>
-                    {pieData.map((entry, i) => <Cell key={i} fill={entry.color} />)}
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} dataKey="value">
+                    {pieData.map((entry, i) => (
+                      <Cell key={i} fill={entry.color} />
+                    ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
-              <div className="mt-2 flex flex-wrap justify-center gap-3 text-xs text-muted-foreground">
-                {pieData.map((d) => (
-                  <span key={d.name} className="flex items-center gap-1.5">
-                    <span className="h-2 w-2 rounded-full" style={{ backgroundColor: d.color }} />
-                    {d.name} ({String(d.value)})
-                  </span>
-                ))}
-              </div>
-            </div>
+            </motion.div>
           )}
 
           {riskData.length > 0 && (
-            <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
-              <h3 className="mb-4 font-semibold text-foreground">Risk Level Distribution</h3>
-              <ResponsiveContainer width="100%" height={250}>
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }}
+              className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-6 shadow-xl"
+            >
+              <h3 className="mb-4 text-lg font-semibold text-pink-300">
+                Risk Level Distribution
+              </h3>
+
+              <ResponsiveContainer width="100%" height={260}>
                 <BarChart data={riskData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 32%, 91%)" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                  <XAxis dataKey="name" stroke="#aaa" />
+                  <YAxis stroke="#aaa" />
                   <Tooltip />
-                  <Bar dataKey="count" fill="hsl(221, 83%, 53%)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </motion.div>
           )}
         </div>
 
+        {/* EMPTY STATE */}
         {assessments.length === 0 && (
-          <div className="mt-8 rounded-xl border border-border bg-card p-12 text-center shadow-sm">
-            <Camera className="mx-auto h-12 w-12 text-muted-foreground/40" />
-            <h3 className="mt-4 text-lg font-semibold text-foreground">No assessments yet</h3>
-            <p className="mt-2 text-muted-foreground">Assessments will appear here once doctors start adding patients.</p>
-          </div>
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }}
+            className="mt-10 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-xl p-12 text-center shadow-xl"
+          >
+            <Camera className="mx-auto h-12 w-12 text-zinc-500" />
+            <h3 className="mt-4 text-lg font-semibold">No assessments yet</h3>
+            <p className="mt-2 text-zinc-400">
+              Assessments will appear here once doctors start adding patients.
+            </p>
+          </motion.div>
         )}
       </div>
     </div>
